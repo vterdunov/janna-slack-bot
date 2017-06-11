@@ -15,7 +15,7 @@ docker run -d --rm \
   --name=janna-slack-bot \
   --restart=always \
   -e SLACK_TOKEN=YOUR_SLACK_TOKEN \
-  -e JANNA_API_ADDRESS=janna.example.com:4567 \
+  -e JANNA_API_ADDRESS=http://janna.example.com:4567 \
   vterdunov/janna-slack-bot
 ```
 
