@@ -1,0 +1,25 @@
+sudo: required
+
+language: go
+
+services:
+  - docker
+
+env:
+  global:
+    - COMMIT=${TRAVIS_COMMIT::8}
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get -y install docker-engine=17.05.0~ce-0~ubuntu-trusty
+
+script:
+  - docker build -t vterdunov/janna-slack-bot:${COMMIT} .
+
+after_success:
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+    docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+    docker tag vterdunov/janna-slack-bot:${COMMIT} vterdunov/janna-slack-bot:latest;
+    docker push vterdunov/janna-slack-bot:${COMMIT};
+    docker push vterdunov/janna-slack-bot:latest;
+    fi
