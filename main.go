@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +17,25 @@ import (
 )
 
 var jannaAPIAddress string
+
+// NetworkInfo provide VM network info
+type NetworkInfo struct {
+	IP string `json:"guest_ip"`
+}
+
+// PowerInfo provide info about VM power state
+type PowerInfo struct {
+	State string `json:"state"`
+}
+
+// InfoVM provide VM info
+type InfoVM struct {
+	Name         string      `json:"name"`
+	UUID         string      `json:"uuid"`
+	InstanceUUID string      `json:"instance_uuid"`
+	Network      NetworkInfo `json:"network"`
+	Power        PowerInfo   `json:"power"`
+}
 
 func main() {
 	token, ok := os.LookupEnv("SLACK_TOKEN")
@@ -72,8 +92,13 @@ func infoHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent
 		bot.Reply(evt, reply, false)
 		return
 	}
+	vminfo := InfoVM{}
+	err = json.Unmarshal(bodyBytes, &vminfo)
+	if err != nil {
+		log.Printf("Error json unmarshal")
+	}
 
-	reply = string(bodyBytes)
+	reply = vminfo.Network.IP
 	bot.Reply(evt, reply, false)
 }
 
