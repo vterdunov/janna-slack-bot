@@ -8,7 +8,7 @@ This Slack bot is client for [Janna API](https://github.com/vterdunov/janna)
 - Give your bot a name. E.g: "@janna"
 - Remember your API Token. It will be used to connect to the Slack chat
 
-### Start bot
+### Quick Start
 ```
 docker pull vterdunov/janna-slack-bot
 docker run -d --rm \
@@ -22,3 +22,16 @@ docker run -d --rm \
 ### Build Docker image
 Install Docker 17.05+. Because a multi-stage builds is used.  
 `docker build -t janna-slack-bot .`
+
+### Development
+Install `go dep` tool:  
+`go get -u github.com/golang/dep/cmd/dep`  
+
+Install dependencies:  
+`dep ensure`  
+
+Export environment variables:  
+```bash
+export SLACK_TOKEN=XXXX-123456789123-XXXXXXXXXXXXXXXXXXXXXXXX
+export JANNA_API_ADDRESS=http://janna.example.com:4567
+```
