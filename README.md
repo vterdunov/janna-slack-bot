@@ -28,7 +28,10 @@ Install `go dep` tool:
 `go get -u github.com/golang/dep/cmd/dep`  
 
 Install dependencies:  
-`dep ensure`  
+`make dep`  
+
+Compilation
+`make compile`
 
 Export environment variables:  
 ```bash
