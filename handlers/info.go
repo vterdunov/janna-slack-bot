@@ -70,6 +70,30 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 		bot.Reply(evt, reply, false)
 	}
 
-	reply = vminfo.Network.IP
-	bot.Reply(evt, reply, false)
+	vm_values := map[string]string{
+		"Name":          vminfo.Name,
+		"IP address":    vminfo.Network.IP,
+		"Power state":   vminfo.Power.State,
+		"uuid":          vminfo.UUID,
+		"Instance uuid": vminfo.InstanceUUID,
+	}
+
+	fields := make([]slack.AttachmentField, 0)
+	for k, v := range vm_values {
+		fields = append(fields, slack.AttachmentField{
+			Title: k,
+			Value: v,
+		})
+	}
+
+	attachment := &slack.Attachment{
+		Pretext: "Virtual Machine Information",
+		Color:   "#7CD197",
+		Fields:  fields,
+	}
+
+	// multiple attachments
+	attachments := []slack.Attachment{*attachment}
+
+	bot.ReplyWithAttachments(evt, attachments, slackbot.WithTyping)
 }
