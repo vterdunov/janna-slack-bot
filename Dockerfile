@@ -14,5 +14,4 @@ RUN make compile
 FROM alpine:3.6
 RUN apk add --no-cache ca-certificates
 CMD ["/janna-slack-bot"]
-RUN ls -la $WORKDIR
 COPY --from=build-stage /go/src/github.com/vterdunov/janna-slack-bot/janna-slack-bot /janna-slack-bot
