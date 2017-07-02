@@ -32,25 +32,25 @@ type InfoVM struct {
 	Power        PowerInfo   `json:"power"`
 }
 
+// Info return information about Virtual Machine
 func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
-	log.Printf("Slack request, handler: Info message: %s", evt.Msg.Text)
+	log.Printf("Slack request, handler: Info, message: %s", evt.Msg.Text)
 
 	jannaAPIAddress := os.Getenv("JANNA_API_ADDRESS")
 
 	var reply string
+	errorReply := "Something went wrong."
 	vmName := utils.MessageTrim(evt.Msg.Text, "info")[0]
 	url := jannaAPIAddress + "/v1/vm?provider_type=vmware&vmname=" + vmName
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Printf("Error while request: %s, err: %s", url, err)
-		reply = "Something went wrong."
-		bot.Reply(evt, reply, false)
+		bot.Reply(evt, errorReply, false)
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Responce code not a 200 OK, request: %s, responce code: %d", url, resp.StatusCode)
-		reply = "Something went wrong."
-		bot.Reply(evt, reply, false)
+		bot.Reply(evt, errorReply, false)
 		return
 	}
 	defer resp.Body.Close()
@@ -58,8 +58,7 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Error while reading body, request: %s, err: %s", url, err)
-		reply = "Something went wrong."
-		bot.Reply(evt, reply, false)
+		bot.Reply(evt, errorReply, false)
 		return
 	}
 	vminfo := InfoVM{}
@@ -70,8 +69,7 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 		bot.Reply(evt, reply, false)
 	}
 
-	vm_values := map[string]string{
-		"Name":          vminfo.Name,
+	vmValues := map[string]string{
 		"IP address":    vminfo.Network.IP,
 		"Power state":   vminfo.Power.State,
 		"uuid":          vminfo.UUID,
@@ -79,7 +77,7 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	}
 
 	fields := make([]slack.AttachmentField, 0)
-	for k, v := range vm_values {
+	for k, v := range vmValues {
 		fields = append(fields, slack.AttachmentField{
 			Title: k,
 			Value: v,
@@ -87,8 +85,8 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	}
 
 	attachment := &slack.Attachment{
-		Pretext: "Virtual Machine Information",
-		Color:   "#7CD197",
+		Pretext: vminfo.Name + " Information",
+		Color:   "a9a9a9",
 		Fields:  fields,
 	}
 

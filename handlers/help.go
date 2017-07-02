@@ -6,11 +6,13 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Help print help message
 func Help(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	commands := map[string]string{
 		"deploy <VM_NAME> <URI to OVA file> [NETWORK]": "Deploy Virtual Machine from OVA file.",
 		"info <VM name>":                               "Information about Virtual Machine.",
-		"help":                                         "See the available bot commands.",
+		"power <VM name> <on|off|reset|suspend>":       "Change Virtual Machine power state.",
+		"help": "See the available bot commands.",
 	}
 
 	fields := make([]slack.AttachmentField, 0)

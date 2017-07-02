@@ -24,13 +24,14 @@ func main() {
 	bot := slackbot.New(token)
 
 	toMe := bot.Messages(slackbot.DirectMessage, slackbot.DirectMention).Subrouter()
-	toMe.Hear("(^info ).*").MessageHandler(InfoHandler)
+	toMe.Hear("(^info ).*").MessageHandler(infoHandler)
+	toMe.Hear("(^power ).*").MessageHandler(powerHandler)
 	toMe.Hear("(^deploy ).*").MessageHandler(deployOVAHandler)
 	toMe.Hear("(?i).*").MessageHandler(helpHandler)
 	bot.Run()
 }
 
-func InfoHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
+func infoHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	handlers.Info(ctx, bot, evt)
 }
 
@@ -40,4 +41,8 @@ func deployOVAHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.Message
 
 func helpHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	handlers.Help(ctx, bot, evt)
+}
+
+func powerHandler(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
+	handlers.Power(ctx, bot, evt)
 }

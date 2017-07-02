@@ -14,6 +14,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// DeployOVA deploy Virtual Machine from OVA file
 func DeployOVA(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	log.Printf("Slack request, handler: deployHandler, message: %s", evt.Msg.Text)
 
