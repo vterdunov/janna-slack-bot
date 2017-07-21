@@ -15,13 +15,25 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "00386b3fbd637582f90cb17482dc3087646c0ac2"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = ["context","websocket"]
-  revision = "8663ed5da4fd087c3cfb99a996e628b72e2f0948"
+  revision = "ab5485076ff3407ad2d02db054635913f017b0ed"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "c4489faa6e5ab84c0ef40d6ee878f7a030281f0f"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ff4d84de1d8c7171ee19059341404c894bb0fe74ed2713b47a1c83a6f7900740"
+  inputs-digest = "bd25e047a85c47848e06d3577104e46c471c197642d37a9a9bf2b738928c3af5"
   solver-name = "gps-cdcl"
   solver-version = 1

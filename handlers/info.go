@@ -3,12 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 
 	slackbot "github.com/adampointer/go-slackbot"
 	"github.com/nlopes/slack"
+	log "github.com/sirupsen/logrus"
 	"github.com/vterdunov/janna-slack-bot/utils"
 	"golang.org/x/net/context"
 )
@@ -34,7 +34,10 @@ type InfoVM struct {
 
 // Info return information about Virtual Machine
 func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
-	log.Printf("Slack request, handler: Info, message: %s", evt.Msg.Text)
+	log.WithFields(log.Fields{
+		"handler": "Info",
+		"message": evt.Msg.Text,
+	}).Info("Request for get information about VM")
 
 	jannaAPIAddress := os.Getenv("JANNA_API_ADDRESS")
 
@@ -44,12 +47,17 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	url := jannaAPIAddress + "/v1/vm?provider_type=vmware&vmname=" + vmName
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Printf("Error while request: %s, err: %s", url, err)
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Error while request to Janna API")
 		bot.Reply(evt, errorReply, false)
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Responce code not a 200 OK, request: %s, responce code: %d", url, resp.StatusCode)
+		log.WithFields(log.Fields{
+			"url":           url,
+			"responce code": resp.StatusCode,
+		}).Error("Responce code not a 200 OK")
 		bot.Reply(evt, errorReply, false)
 		return
 	}
@@ -57,7 +65,9 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error while reading body, request: %s, err: %s", url, err)
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Error while reading body")
 		bot.Reply(evt, errorReply, false)
 		return
 	}
@@ -65,7 +75,9 @@ func Info(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	err = json.Unmarshal(bodyBytes, &vminfo)
 	if err != nil {
 		reply = "Error json unmarshal."
-		log.Printf(reply)
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error(reply)
 		bot.Reply(evt, reply, false)
 	}
 

@@ -1,14 +1,23 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	slackbot "github.com/adampointer/go-slackbot"
 	"github.com/nlopes/slack"
+	log "github.com/sirupsen/logrus"
 	"github.com/vterdunov/janna-slack-bot/handlers"
 	"golang.org/x/net/context"
 )
+
+func init() {
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.DebugLevel)
+	customFormatter := new(log.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	log.SetFormatter(customFormatter)
+	customFormatter.FullTimestamp = true
+}
 
 func main() {
 	token, ok := os.LookupEnv("SLACK_TOKEN")

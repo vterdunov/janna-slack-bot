@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"log"
+
 	"net/http"
 	"net/url"
 	"os"
@@ -10,13 +10,17 @@ import (
 
 	slackbot "github.com/adampointer/go-slackbot"
 	"github.com/nlopes/slack"
+	log "github.com/sirupsen/logrus"
 	"github.com/vterdunov/janna-slack-bot/utils"
 	"golang.org/x/net/context"
 )
 
 // DeployOVA deploy Virtual Machine from OVA file
 func DeployOVA(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
-	log.Printf("Slack request, handler: deployHandler, message: %s", evt.Msg.Text)
+	log.WithFields(log.Fields{
+		"handler": "DeployOVA",
+		"message": evt.Msg.Text,
+	}).Info("Request for deploy VM")
 
 	var reply string
 	msgPayload := utils.MessageTrim(evt.Msg.Text, "deploy")
@@ -42,12 +46,14 @@ func DeployOVA(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) 
 	jannaAPIAddress := os.Getenv("JANNA_API_ADDRESS")
 	resp, err := http.PostForm(jannaAPIAddress+"/v1/vm", form)
 	if err != nil {
-		log.Printf("Error while request, err: %s", err)
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Error while request")
 		reply = "Something went wrong."
 		bot.Reply(evt, reply, false)
 		return
 	}
-	fmt.Printf("Status code %d", resp.StatusCode)
+	log.Infof("Status code %d", resp.StatusCode)
 	reply = resp.Status
 	bot.Reply(evt, reply, false)
 }

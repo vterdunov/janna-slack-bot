@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 
 	slackbot "github.com/adampointer/go-slackbot"
 	"github.com/nlopes/slack"
+	log "github.com/sirupsen/logrus"
 	"github.com/vterdunov/janna-slack-bot/utils"
 	"golang.org/x/net/context"
 )
@@ -24,7 +24,10 @@ type PowerState struct {
 
 // Power return information about Virtual Machine
 func Power(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
-	log.Printf("Slack request, handler: Power, message: %s", evt.Msg.Text)
+	log.WithFields(log.Fields{
+		"handler": "Power",
+		"message": evt.Msg.Text,
+	}).Info("Request for change VM power state")
 
 	var reply string
 	errorReply := "Something went wrong."
@@ -55,12 +58,18 @@ func Power(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Printf("Error while request, err: %s, request: %s", err, urlString)
+		log.WithFields(log.Fields{
+			"error":   err,
+			"request": urlString,
+		}).Warn("Error while request")
+
 		bot.Reply(evt, errorReply, false)
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Responce code not a 200 OK, request: %s, responce code: %d", urlString, resp.StatusCode)
+		log.WithFields(log.Fields{
+			"responce code": resp.StatusCode,
+		}).Error("Responce code not a 200 OK")
 		bot.Reply(evt, errorReply, false)
 		return
 	}
@@ -68,7 +77,9 @@ func Power(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error while reading body, request: %s, err: %s", urlString, err)
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Error while reading body")
 		bot.Reply(evt, errorReply, false)
 		return
 	}
@@ -76,7 +87,9 @@ func Power(ctx context.Context, bot *slackbot.Bot, evt *slack.MessageEvent) {
 	err = json.Unmarshal(bodyBytes, &vmState)
 	if err != nil {
 		reply = "Error json unmarshal."
-		log.Printf(reply)
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error(reply)
 		bot.Reply(evt, reply, false)
 		return
 	}
