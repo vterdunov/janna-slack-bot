@@ -2,38 +2,43 @@
 
 
 [[projects]]
-  branch = "master"
-  name = "github.com/adampointer/go-slackbot"
+  name = "github.com/gorilla/websocket"
   packages = ["."]
-  revision = "098fc320f1b3ce6e89704c035cca296dbcaf6c6d"
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
+
+[[projects]]
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/nlopes/slack"
   packages = ["."]
-  revision = "c86337c0ef2486a15edd804355d9c73d2f2caed1"
-  version = "v0.1.0"
+  revision = "8ab4d0b364ef1e9af5d102531da20d5ec902b6c4"
+  version = "v0.2.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/sirupsen/logrus"
+  name = "github.com/pkg/errors"
   packages = ["."]
-  revision = "00386b3fbd637582f90cb17482dc3087646c0ac2"
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
 
 [[projects]]
-  branch = "master"
-  name = "golang.org/x/net"
-  packages = ["context","websocket"]
-  revision = "ab5485076ff3407ad2d02db054635913f017b0ed"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "c4489faa6e5ab84c0ef40d6ee878f7a030281f0f"
+  name = "github.com/rs/zerolog"
+  packages = [
+    ".",
+    "internal/cbor",
+    "internal/json",
+    "log"
+  ]
+  revision = "77db4b4f350e31be66a57c332acb7721cf9ff9bb"
+  version = "v1.8.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bd25e047a85c47848e06d3577104e46c471c197642d37a9a9bf2b738928c3af5"
+  inputs-digest = "3e92d430233cf8e5651cc501ac7ed92ddd6881331e8374449e491b2fde710f5d"
   solver-name = "gps-cdcl"
   solver-version = 1
