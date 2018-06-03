@@ -1,4 +1,4 @@
-package helpers
+package vm
 
 // import (
 // 	"bytes"
@@ -68,8 +68,8 @@ package helpers
 // 	}
 // 	if resp.StatusCode != http.StatusOK {
 // 		log.WithFields(log.Fields{
-// 			"responce code": resp.StatusCode,
-// 		}).Error("Responce code not a 200 OK")
+// 			"response code": resp.StatusCode,
+// 		}).Error("Response code not a 200 OK")
 // 		bot.Reply(evt, errorReply, false)
 // 		return
 // 	}

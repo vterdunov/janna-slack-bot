@@ -1,4 +1,4 @@
-package helpers
+package vm
 
 import (
 	"github.com/nlopes/slack"

@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/vterdunov/janna-slack-bot/pkg/config"
-	"github.com/vterdunov/janna-slack-bot/pkg/helpers"
+	vm "github.com/vterdunov/janna-slack-bot/pkg/vm"
 )
 
 // Bot represents a bot
@@ -37,7 +37,7 @@ func New(cfg *config.Config, client *slack.Client, logger *zerolog.Logger) *Bot 
 }
 
 // Run bot
-func (b *Bot) Run(ctx context.Context) error {
+func (b *Bot) Run(_ context.Context) error {
 	_, err := b.Client.AuthTest()
 	if err != nil {
 		return errors.Wrap(err, "did not authenticate")
@@ -113,13 +113,12 @@ func (b *Bot) routeMessage(msgs []string, ev *slack.MessageEvent) {
 }
 
 func helpHandler(c *slack.Client, ev *slack.MessageEvent) {
-	attachments := helpers.HelpAttachments()
+	attachments := vm.HelpAttachments()
 	replyWithAttachments(c, ev, attachments)
 }
 
-func vmInfoHandler(c *slack.Client, ev *slack.MessageEvent, ja string, vmName string, rtm *slack.RTM) {
-
-	attachments, err := helpers.VMInfo(c, ev, ja, vmName)
+func vmInfoHandler(c *slack.Client, ev *slack.MessageEvent, jannaAddr string, vmName string, rtm *slack.RTM) {
+	attachments, err := vm.Info(jannaAddr, vmName)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get VM info")
 		reply(rtm, ev, err.Error())

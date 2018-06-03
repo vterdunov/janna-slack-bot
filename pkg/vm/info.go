@@ -1,41 +1,68 @@
-package helpers
+package vm
 
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/nlopes/slack"
 )
 
-type InfoVM struct {
-	Summary `json:"summary"`
+type info struct {
+	summary `json:"summary"`
 }
 
-type Summary struct {
-	Guest   `json:"Guest"`
-	Config  `json:"Config"`
-	Runtime `json:"Runtime"`
+type summary struct {
+	guest   `json:"Guest"`
+	config  `json:"Config"`
+	runtime `json:"Runtime"`
 }
 
-type Guest struct {
+type guest struct {
 	IP string `json:"IpAddress"`
 }
 
-type Config struct {
+type config struct {
 	UUID string `json:"Uuid"`
 }
 
-type Runtime struct {
+type runtime struct {
 	PowerState string `json:"PowerState"`
 }
 
-// VMInfo return information about Virtual Machine
-func VMInfo(client *slack.Client, ev *slack.MessageEvent, jannaAPIAddress string, vmName string) ([]slack.Attachment, error) {
-	// TODO: get VM UUID
-	url := jannaAPIAddress + "/vm/564d2d6d-40fe-7e0a-e871-c4ecb46a19d1"
-	// url := jannaAPIAddress + "/vm/" + vmName
+func uuidByName(apiAddr string, vmName string) (string, error) {
+	url := fmt.Sprintf("%s/find/vm?path=%s", apiAddr, vmName)
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.New("Could not get Virtual Machine UUID")
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(body)
+
+	// FIX: change the stub
+	return "564d2d6d-40fe-7e0a-e871-c4ecb46a19d1", nil
+}
+
+// Info return information about Virtual Machine as Slack attachments
+func Info(jannaAddr string, vmName string) ([]slack.Attachment, error) {
+	uuid, err := uuidByName(jannaAddr, vmName)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("%s/vm/%s", jannaAddr, uuid)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -53,7 +80,7 @@ func VMInfo(client *slack.Client, ev *slack.MessageEvent, jannaAPIAddress string
 		return nil, err
 	}
 
-	vminfo := InfoVM{}
+	vminfo := info{}
 	err = json.Unmarshal(bodyBytes, &vminfo)
 	if err != nil {
 		return nil, err
