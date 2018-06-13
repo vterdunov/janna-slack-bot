@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/nlopes/slack"
@@ -9,8 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/vterdunov/janna-slack-bot/pkg/config"
-	vm "github.com/vterdunov/janna-slack-bot/pkg/vm"
+	"github.com/vterdunov/janna-slack-bot/internal/config"
 )
 
 // Bot represents a bot
@@ -48,56 +48,84 @@ func (b *Bot) Run(_ context.Context) error {
 
 	for msg := range b.RTM.IncomingEvents {
 		switch ev := msg.Data.(type) {
+
+		case *slack.RTMError:
+			log.Error().Str("error", ev.Msg).Int("code", ev.Code).Msg("")
+
+		case *slack.ConnectingEvent:
+			log.Info().
+				Int("connections count", ev.ConnectionCount).
+				Int("attempt", ev.Attempt).
+				Msg("Connecting bot to Slack")
+
 		case *slack.ConnectedEvent:
-			log.Info().Str("bot_name", ev.Info.User.Name).Msg("Connected")
+			// for _, ch := range b.RTM.GetInfo().Channels {
+			// 	// fmt.Println(i)
+			// }
+
+			log.Info().
+				Str("bot name", ev.Info.User.Name).
+				Int("connections count", ev.ConnectionCount).
+				Msg("Connected")
 
 			b.UserID = ev.Info.User.ID
+
 		case *slack.MessageEvent:
-			if err := b.handleMessageEvent(ev); err != nil {
-				log.Error().Err(err).Msg("Failed to handle message")
-			}
+			b.handleMessageEvent(ev)
+
+		case *slack.DisconnectedEvent:
+			log.Info().Msg("Bot disconnected")
 		}
 	}
 
 	return nil
 }
 
-func (b *Bot) handleMessageEvent(ev *slack.MessageEvent) error {
+func (b *Bot) handleMessageEvent(ev *slack.MessageEvent) {
 	// Only response in specific channel. Ignore else.
 	if ev.Channel != b.ChannelID {
 		log.Debug().Msg("Only response in specific channel. Ignore.")
-		return nil
+		return
 	}
 
 	// ignore messages from the current user, the bot user
 	if b.UserID == ev.User {
 		log.Debug().Msg("Ignore messages from the current user, the bot user")
-		return nil
+		return
 	}
 
-	msgs := messageTrim(ev.Msg.Text)
+	// check if the message to bot
+	botTagString := fmt.Sprintf("<@%s>", b.UserID)
+	if !strings.Contains(ev.Msg.Text, botTagString) {
+		return
+	}
+
+	msgs := messageParts(ev.Msg.Text)
 
 	b.routeMessage(msgs, ev)
-	return nil
 }
 
-// reply replies to a message event with a simple message.
-func reply(rtm *slack.RTM, ev *slack.MessageEvent, msg string) {
-	rtm.SendMessage(rtm.NewOutgoingMessage(msg, ev.Channel))
+// Reply replies to a message event with a simple message.
+func (b *Bot) Reply(channel, msg string) {
+	b.RTM.SendMessage(b.RTM.NewOutgoingMessage(msg, channel))
 
 }
 
-// replyWithAttachments replys to a message event with a Slack Attachments message.
-func replyWithAttachments(c *slack.Client, ev *slack.MessageEvent, attachments []slack.Attachment) {
+// ReplyWithAttachments replys to a message event with a Slack Attachments message.
+func (b *Bot) ReplyWithAttachments(channel string, attachments []slack.Attachment) {
 	params := slack.PostMessageParameters{AsUser: true}
 	params.Attachments = attachments
 
-	c.PostMessage(ev.Msg.Channel, "", params)
+	b.Client.PostMessage(channel, "", params)
 }
 
-func messageTrim(msg string) []string {
+func messageParts(msg string) []string {
 	text := strings.TrimSpace(msg)
-	return strings.Fields(text)[1:]
+	fields := strings.Fields(text)
+	if len(fields) <= 1 {
+		return fields
+	}
+	return fields[1:]
 }
 
 func (b *Bot) routeMessage(msgs []string, ev *slack.MessageEvent) {
@@ -105,23 +133,9 @@ func (b *Bot) routeMessage(msgs []string, ev *slack.MessageEvent) {
 	case "vm":
 		switch msgs[1] {
 		case "info":
-			vmInfoHandler(b.Client, ev, b.JannaAPIAddress, msgs[2], b.RTM)
+			b.vmInfoHandler(ev, b.JannaAPIAddress, msgs[2])
 		}
 	default:
-		helpHandler(b.Client, ev)
+		b.helpHandler(ev)
 	}
-}
-
-func helpHandler(c *slack.Client, ev *slack.MessageEvent) {
-	attachments := vm.HelpAttachments()
-	replyWithAttachments(c, ev, attachments)
-}
-
-func vmInfoHandler(c *slack.Client, ev *slack.MessageEvent, jannaAddr string, vmName string, rtm *slack.RTM) {
-	attachments, err := vm.Info(jannaAddr, vmName)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not get VM info")
-		reply(rtm, ev, err.Error())
-	}
-	replyWithAttachments(c, ev, attachments)
 }

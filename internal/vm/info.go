@@ -40,7 +40,7 @@ func uuidByName(apiAddr string, vmName string) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New("Could not get Virtual Machine UUID")
+		return "", errors.New("Could not find VM")
 	}
 
 	defer resp.Body.Close()
@@ -49,10 +49,16 @@ func uuidByName(apiAddr string, vmName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(body)
 
-	// FIX: change the stub
-	return "564d2d6d-40fe-7e0a-e871-c4ecb46a19d1", nil
+	uuid := struct {
+		UUID string `json:"uuid"`
+	}{}
+
+	if err := json.Unmarshal(body, &uuid); err != nil {
+		return "", err
+	}
+
+	return uuid.UUID, nil
 }
 
 // Info return information about Virtual Machine as Slack attachments
@@ -70,7 +76,7 @@ func Info(jannaAddr string, vmName string) ([]slack.Attachment, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("Request to Janna API was failed. Response code is not 200 OK")
+		return nil, errors.New("Request to Janna API was failed")
 	}
 
 	defer resp.Body.Close()

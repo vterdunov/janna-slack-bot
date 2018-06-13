@@ -2,15 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/nlopes/slack"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/vterdunov/janna-slack-bot/pkg/bot"
-	"github.com/vterdunov/janna-slack-bot/pkg/config"
+	"github.com/vterdunov/janna-slack-bot/internal/bot"
+	"github.com/vterdunov/janna-slack-bot/internal/config"
 )
 
 func main() {
@@ -26,8 +25,8 @@ func main() {
 
 	bot := bot.New(cfg, client, &logger)
 
-	logger.Info().Msg("Starting bot")
+	logger.Info().Msg("Running bot")
 	if err := bot.Run(ctx); err != nil {
-		fmt.Println("ERROR")
+		log.Error().Err(err)
 	}
 }
