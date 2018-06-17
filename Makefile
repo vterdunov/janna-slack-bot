@@ -14,7 +14,7 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-all: check test docker
+all: lint test docker
 
 .PHONY: docker
 docker:
@@ -52,6 +52,10 @@ test:
 .PHONY: check
 check:
 	@gometalinter.v2 ./...
+
+.PHONY: lint
+lint:
+	@golangci-lint run
 
 .PHONY: clean
 clean:

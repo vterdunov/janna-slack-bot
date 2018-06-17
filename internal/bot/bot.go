@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/nlopes/slack"
@@ -100,9 +101,9 @@ func (b *Bot) handleMessageEvent(ev *slack.MessageEvent) {
 		return
 	}
 
-	msgs := messageParts(ev.Msg.Text)
+	msg := strings.TrimSpace(ev.Msg.Text)
 
-	b.routeMessage(msgs, ev)
+	b.routeMessage(msg, ev)
 }
 
 // Reply replies to a message event with a simple message.
@@ -119,23 +120,30 @@ func (b *Bot) ReplyWithAttachments(channel string, attachments []slack.Attachmen
 	b.Client.PostMessage(channel, "", params)
 }
 
-func messageParts(msg string) []string {
-	text := strings.TrimSpace(msg)
-	fields := strings.Fields(text)
-	if len(fields) <= 1 {
-		return fields
+func (b *Bot) routeMessage(msg string, ev *slack.MessageEvent) {
+	//  vm info
+	infoRegexp := regexp.MustCompile(`vm\s+info\s+([a-zA-Z0-9-\.]+)`)
+	if infoRegexp.MatchString(msg) {
+		log.Debug().Msg("calling VM info handler")
+		ss := infoRegexp.FindStringSubmatch(msg)
+		vmName := ss[1]
+		// TODO: take JannaAPI address from Bot field
+		b.vmInfoHandler(ev, b.JannaAPIAddress, vmName)
+		return
 	}
-	return fields[1:]
-}
 
-func (b *Bot) routeMessage(msgs []string, ev *slack.MessageEvent) {
-	switch msgs[0] {
-	case "vm":
-		switch msgs[1] {
-		case "info":
-			b.vmInfoHandler(ev, b.JannaAPIAddress, msgs[2])
-		}
-	default:
-		b.helpHandler(ev)
+	// vm find
+	vmFindRegexp := regexp.MustCompile(`vm\s+find\s+([a-zA-Z0-9-\.]+)`)
+	if vmFindRegexp.MatchString(msg) {
+		log.Debug().Msg("calling VM find handler")
+		ss := vmFindRegexp.FindStringSubmatch(msg)
+		vmName := ss[1]
+		// TODO: take JannaAPI address from Bot field
+		b.vmFindHandler(ev, b.JannaAPIAddress, vmName)
+		return
 	}
+
+	// help
+	log.Debug().Msg("unknown handler. calling help handler")
+	b.helpHandler(ev)
 }

@@ -40,7 +40,7 @@ func uuidByName(apiAddr string, vmName string) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New("Could not find VM")
+		return "", errors.New("could not find VM")
 	}
 
 	defer resp.Body.Close()
@@ -76,7 +76,7 @@ func Info(jannaAddr string, vmName string) ([]slack.Attachment, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("Request to Janna API was failed")
+		return nil, errors.New("request to Janna API was failed")
 	}
 
 	defer resp.Body.Close()

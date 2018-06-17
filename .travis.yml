@@ -9,21 +9,8 @@ env:
   global:
     - COMMIT=${TRAVIS_COMMIT::7}
 
-before_install:
-  - sudo apt-get update
-  - sudo apt-get -y install docker-ce
+install:
+  - go get -u gopkg.in/golangci/golangci-lint.v1/cmd/golangci-lint
 
-jobs:
-  include:
-    - stage: build docker image
-      script:
-        - docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"
-        - docker build -t ${DOCKER_USERNAME}/janna-slack-bot:${COMMIT} .
-        - docker images
-        - docker tag ${DOCKER_USERNAME}/janna-slack-bot:${COMMIT} ${DOCKER_USERNAME}/janna-slack-bot:latest
-
-after_success:
-  - if [ "$TRAVIS_BRANCH" == "master" ]; then
-      docker push ${DOCKER_USERNAME}/janna-slack-bot:${COMMIT};
-      docker push ${DOCKER_USERNAME}/janna-slack-bot:latest;
-    fi
+script:
+  - docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"

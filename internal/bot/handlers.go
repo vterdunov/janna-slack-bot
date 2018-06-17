@@ -44,3 +44,15 @@ func (b *Bot) vmInfoHandler(ev *slack.MessageEvent, jannaAddr string, vmName str
 
 	b.ReplyWithAttachments(ev.Channel, attachments)
 }
+
+func (b *Bot) vmFindHandler(ev *slack.MessageEvent, jannaAddr string, vmName string) {
+	// TODO: implement me
+	attachments := []slack.Attachment{}
+	// attachments, err := vm.Info(jannaAddr, vmName)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("Could not get VM info")
+	// 	b.Reply(ev.Channel, err.Error())
+	// }
+
+	b.ReplyWithAttachments(ev.Channel, attachments)
+}
