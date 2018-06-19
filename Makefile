@@ -1,4 +1,5 @@
 PROG_NAME = janna-slack-bot
+IMAGE_NAME = vterdunov/$(PROG_NAME)
 
 PORT ?= 8080
 COMMIT ?= $(shell git rev-parse --short HEAD)
@@ -8,8 +9,8 @@ PROJECT ?= github.com/vterdunov/${PROG_NAME}
 GO_VARS=CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 GO_LDFLAGS :="
 GO_LDFLAGS += -s -w
-GO_LDFLAGS += -X ${PROJECT}/pkg/version.Commit=${COMMIT}
-GO_LDFLAGS += -X ${PROJECT}/pkg/version.BuildTime=${BUILD_TIME}
+GO_LDFLAGS += -X ${PROJECT}/internal/version.Commit=${COMMIT}
+GO_LDFLAGS += -X ${PROJECT}/internal/version.BuildTime=${BUILD_TIME}
 GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
@@ -18,12 +19,12 @@ all: lint test docker
 
 .PHONY: docker
 docker:
-	docker build --tag=$(PROG_NAME):$(COMMIT) --tag=$(PROG_NAME):latest --file build/Dockerfile .
+	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --file build/Dockerfile .
 
 .PHONY: push
 push:
-	docker tag $(PROG_NAME):$(COMMIT) $(PROG_NAME):$(TAG)
-	docker push $(PROG_NAME):$(TAG)
+	docker tag $(IMAGE_NAME):$(COMMIT) $(IMAGE_NAME):$(TAG)
+	docker push $(IMAGE_NAME):$(TAG)
 
 .PHONY: dep
 dep:
