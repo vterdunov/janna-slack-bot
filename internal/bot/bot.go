@@ -127,8 +127,8 @@ func (b *Bot) routeMessage(msg string, ev *slack.MessageEvent) {
 		log.Debug().Msg("calling VM info handler")
 		ss := infoRegexp.FindStringSubmatch(msg)
 		vmName := ss[1]
-		// TODO: take JannaAPI address from Bot field
-		b.vmInfoHandler(ev, b.JannaAPIAddress, vmName)
+
+		b.vmInfoHandler(ev.Channel, vmName)
 		return
 	}
 
@@ -138,12 +138,12 @@ func (b *Bot) routeMessage(msg string, ev *slack.MessageEvent) {
 		log.Debug().Msg("calling VM find handler")
 		ss := vmFindRegexp.FindStringSubmatch(msg)
 		vmName := ss[1]
-		// TODO: take JannaAPI address from Bot field
-		b.vmFindHandler(ev, b.JannaAPIAddress, vmName)
+
+		b.vmFindHandler(ev.Channel, vmName)
 		return
 	}
 
 	// help
 	log.Debug().Msg("unknown handler. calling help handler")
-	b.helpHandler(ev)
+	b.helpHandler(ev.Channel)
 }

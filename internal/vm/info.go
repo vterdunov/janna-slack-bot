@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/nlopes/slack"
 )
 
-type info struct {
+// VMInfo collects information about VM
+type VMInfo struct {
 	summary `json:"summary"`
 }
 
@@ -62,7 +61,7 @@ func uuidByName(apiAddr string, vmName string) (string, error) {
 }
 
 // Info return information about Virtual Machine as Slack attachments
-func Info(jannaAddr string, vmName string) ([]slack.Attachment, error) {
+func Info(jannaAddr string, vmName string) (*VMInfo, error) {
 	uuid, err := uuidByName(jannaAddr, vmName)
 	if err != nil {
 		return nil, err
@@ -86,34 +85,11 @@ func Info(jannaAddr string, vmName string) ([]slack.Attachment, error) {
 		return nil, err
 	}
 
-	vminfo := info{}
+	vminfo := VMInfo{}
 	err = json.Unmarshal(bodyBytes, &vminfo)
 	if err != nil {
 		return nil, err
 	}
 
-	vmValues := map[string]string{
-		"IP address":  vminfo.IP,
-		"Power state": vminfo.PowerState,
-		"UUID":        vminfo.UUID,
-	}
-
-	fields := make([]slack.AttachmentField, 0)
-	for k, v := range vmValues {
-		fields = append(fields, slack.AttachmentField{
-			Title: k,
-			Value: v,
-		})
-	}
-
-	attachment := &slack.Attachment{
-		Pretext: vmName + " information",
-		Color:   "a9a9a9",
-		Fields:  fields,
-	}
-
-	// multiple attachments
-	attachments := []slack.Attachment{*attachment}
-
-	return attachments, nil
+	return &vminfo, nil
 }
