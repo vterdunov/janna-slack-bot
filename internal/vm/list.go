@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-type VMList struct {
+type list struct {
 	List map[string]string `json:"vm_list"`
 }
 
@@ -31,7 +31,7 @@ func List(jannaAddr string) ([]string, error) {
 		return nil, err
 	}
 
-	vmList := VMList{}
+	vmList := list{}
 	err = json.Unmarshal(bodyBytes, &vmList)
 	if err != nil {
 		return nil, err

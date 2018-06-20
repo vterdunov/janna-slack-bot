@@ -8,8 +8,8 @@ import (
 	"net/http"
 )
 
-// VMInfo collects information about VM
-type VMInfo struct {
+// ShortInfo collects information about VM
+type ShortInfo struct {
 	summary `json:"summary"`
 }
 
@@ -61,7 +61,7 @@ func uuidByName(apiAddr string, vmName string) (string, error) {
 }
 
 // Info return information about Virtual Machine as Slack attachments
-func Info(jannaAddr string, vmName string) (*VMInfo, error) {
+func Info(jannaAddr string, vmName string) (*ShortInfo, error) {
 	uuid, err := uuidByName(jannaAddr, vmName)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func Info(jannaAddr string, vmName string) (*VMInfo, error) {
 		return nil, err
 	}
 
-	vminfo := VMInfo{}
+	vminfo := ShortInfo{}
 	err = json.Unmarshal(bodyBytes, &vminfo)
 	if err != nil {
 		return nil, err
