@@ -17,7 +17,6 @@ import (
 // Bot represents a bot
 type Bot struct {
 	Name            string
-	ChannelID       string
 	UserID          string
 	JannaAPIAddress string
 
@@ -30,7 +29,6 @@ type Bot struct {
 func New(cfg *config.Config, client *slack.Client, logger *zerolog.Logger) *Bot {
 	return &Bot{
 		Name:            cfg.BotName,
-		ChannelID:       cfg.ChannelID,
 		JannaAPIAddress: cfg.JannaAPIAddress,
 		Logger:          logger,
 		Client:          client,
@@ -60,10 +58,6 @@ func (b *Bot) Run(_ context.Context) error {
 				Msg("Connecting bot to Slack")
 
 		case *slack.ConnectedEvent:
-			// for _, ch := range b.RTM.GetInfo().Channels {
-			// 	// fmt.Println(i)
-			// }
-
 			log.Info().
 				Str("bot name", ev.Info.User.Name).
 				Int("connections count", ev.ConnectionCount).
@@ -76,6 +70,9 @@ func (b *Bot) Run(_ context.Context) error {
 
 		case *slack.DisconnectedEvent:
 			log.Info().Msg("Bot disconnected")
+
+		default:
+			// Ignore other events..
 		}
 	}
 
@@ -83,12 +80,6 @@ func (b *Bot) Run(_ context.Context) error {
 }
 
 func (b *Bot) handleMessageEvent(ev *slack.MessageEvent) {
-	// Only response in specific channel. Ignore else.
-	if ev.Channel != b.ChannelID {
-		log.Debug().Msg("Only response in specific channel. Ignore.")
-		return
-	}
-
 	// ignore messages from the current user, the bot user
 	if b.UserID == ev.User {
 		log.Debug().Msg("Ignore messages from the current user, the bot user")
@@ -96,12 +87,12 @@ func (b *Bot) handleMessageEvent(ev *slack.MessageEvent) {
 	}
 
 	// check if the message to bot
-	botTagString := fmt.Sprintf("<@%s>", b.UserID)
-	if !strings.Contains(ev.Msg.Text, botTagString) {
+	botTag := fmt.Sprintf("<@%s>", b.UserID)
+	if !strings.HasPrefix(ev.Msg.Text, botTag) && !isDirectMessage(ev) {
 		return
 	}
 
-	msg := strings.TrimSpace(ev.Msg.Text)
+	msg := prepareMsg(ev.Text)
 
 	b.routeMessage(msg, ev)
 }
@@ -144,6 +135,26 @@ func (b *Bot) routeMessage(msg string, ev *slack.MessageEvent) {
 	}
 
 	// help
-	log.Debug().Msg("unknown handler. calling help handler")
-	b.helpHandler(ev.Channel)
+	helpRegexp := regexp.MustCompile(`help`)
+	if helpRegexp.MatchString(msg) {
+		log.Debug().Msg("calling help handler")
+		b.helpHandler(ev.Channel)
+		return
+	}
+}
+
+func prepareMsg(text string) string {
+	msg := strings.TrimSpace(text)
+	return stripDirectMention(msg)
+}
+
+// isDirectMessage returns true if this message is in a direct message conversation
+func isDirectMessage(ev *slack.MessageEvent) bool {
+	return regexp.MustCompile("^D.*").MatchString(ev.Channel)
+}
+
+// stripDirectMention removes a leading mention (aka direct mention) from a message string
+func stripDirectMention(text string) string {
+	r := regexp.MustCompile(`(^<@[a-zA-Z0-9]+>[\:]*[\s]*)?(.*)`)
+	return r.FindStringSubmatch(text)[2]
 }
