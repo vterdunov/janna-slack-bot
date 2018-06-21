@@ -26,6 +26,14 @@ type Bot struct {
 	RTM    *slack.RTM
 }
 
+type contextKey string
+
+func (c contextKey) String() string {
+	return string(c)
+}
+
+const requestID = contextKey("request_id")
+
 // New create a new bot instance
 func New(cfg *config.Config, client *slack.Client, logger *zerolog.Logger) *Bot {
 	return &Bot{
@@ -49,7 +57,7 @@ func (b *Bot) Run(_ context.Context) error {
 	for msg := range b.RTM.IncomingEvents {
 		uuid := uuid.NewV4()
 		ctx := context.Background()
-		ctx = context.WithValue(ctx, "request_id", uuid.String())
+		ctx = context.WithValue(ctx, requestID, uuid.String())
 
 		switch ev := msg.Data.(type) {
 
@@ -118,11 +126,11 @@ func (b *Bot) ReplyWithAttachments(channel string, attachments []slack.Attachmen
 
 // ReplyWithError replys to a message event with an error message.
 func (b *Bot) ReplyWithError(ctx context.Context, channel, err string) {
-	reqID, ok := ctx.Value("request_id").(string)
+	reqID, ok := ctx.Value(requestID).(string)
 	if !ok {
 		log.Error().Msg("Could not get request ID")
 	}
-	fmt.Println(reqID)
+
 	attachment := &slack.Attachment{
 		Color:  "ff0000",
 		Text:   err,
