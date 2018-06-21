@@ -25,8 +25,8 @@ func main() {
 
 	bot := bot.New(cfg, client, &logger)
 
-	logger.Info().Msg("Running bot")
+	logger.Info().Msg("Run bot")
 	if err := bot.Run(ctx); err != nil {
-		log.Error().Err(err)
+		logger.Error().Err(err).Msg("error while bot is rinning")
 	}
 }

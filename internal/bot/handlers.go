@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -39,11 +40,12 @@ func (b *Bot) helpHandler(channel string) {
 	b.ReplyWithAttachments(channel, attachments)
 }
 
-func (b *Bot) vmInfoHandler(channel, vmName string) {
+func (b *Bot) vmInfoHandler(ctx context.Context, channel, vmName string) {
 	vmInfo, err := vm.Info(b.JannaAPIAddress, vmName)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get VM info")
-		b.Reply(channel, err.Error())
+		b.ReplyWithError(ctx, channel, "Could not get VM info")
+		return
 	}
 
 	vmValues := map[string]string{
@@ -72,11 +74,12 @@ func (b *Bot) vmInfoHandler(channel, vmName string) {
 	b.ReplyWithAttachments(channel, attachments)
 }
 
-func (b *Bot) vmFindHandler(channel, pattern string) {
+func (b *Bot) vmFindHandler(ctx context.Context, channel, pattern string) {
 	vmList, err := vm.List(b.JannaAPIAddress)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not get VM list")
-		b.Reply(channel, err.Error())
+		b.ReplyWithError(ctx, channel, "Could not get VM list")
+		return
 	}
 
 	fields := make([]slack.AttachmentField, 0)

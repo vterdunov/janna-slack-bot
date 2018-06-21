@@ -40,7 +40,7 @@ cgo-compile: clean
 
 .PHONY: start
 start:
-	@env `cat .env | grep -v ^# | xargs` go run ./cmd/bot/bot.go
+	@env `cat .env | grep -v ^# | xargs` go run -race ./cmd/bot/bot.go
 
 .PHONY: dc
 dc: compile

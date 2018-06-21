@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/vterdunov/janna-slack-bot/internal/config"
 )
@@ -46,6 +47,10 @@ func (b *Bot) Run(_ context.Context) error {
 	go b.RTM.ManageConnection()
 
 	for msg := range b.RTM.IncomingEvents {
+		uuid := uuid.NewV4()
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, "request_id", uuid.String())
+
 		switch ev := msg.Data.(type) {
 
 		case *slack.RTMError:
@@ -66,7 +71,7 @@ func (b *Bot) Run(_ context.Context) error {
 			b.UserID = ev.Info.User.ID
 
 		case *slack.MessageEvent:
-			b.handleMessageEvent(ev)
+			b.handleMessageEvent(ctx, ev)
 
 		case *slack.DisconnectedEvent:
 			log.Info().Msg("Bot disconnected")
@@ -79,7 +84,7 @@ func (b *Bot) Run(_ context.Context) error {
 	return nil
 }
 
-func (b *Bot) handleMessageEvent(ev *slack.MessageEvent) {
+func (b *Bot) handleMessageEvent(ctx context.Context, ev *slack.MessageEvent) {
 	// ignore messages from the current user, the bot user
 	if b.UserID == ev.User {
 		log.Debug().Msg("Ignore messages from the current user, the bot user")
@@ -87,14 +92,14 @@ func (b *Bot) handleMessageEvent(ev *slack.MessageEvent) {
 	}
 
 	// check if the message to bot
-	botTag := fmt.Sprintf("<@%s>", b.UserID)
-	if !strings.HasPrefix(ev.Msg.Text, botTag) && !isDirectMessage(ev) {
+	botMentionTag := fmt.Sprintf("<@%s>", b.UserID)
+	if !strings.HasPrefix(ev.Msg.Text, botMentionTag) && !isDirectMessage(ev) {
 		return
 	}
 
 	msg := prepareMsg(ev.Text)
 
-	b.routeMessage(msg, ev)
+	b.routeMessage(ctx, msg, ev)
 }
 
 // Reply replies to a message event with a simple message.
@@ -111,7 +116,29 @@ func (b *Bot) ReplyWithAttachments(channel string, attachments []slack.Attachmen
 	b.Client.PostMessage(channel, "", params)
 }
 
-func (b *Bot) routeMessage(msg string, ev *slack.MessageEvent) {
+// ReplyWithError replys to a message event with an error message.
+func (b *Bot) ReplyWithError(ctx context.Context, channel, err string) {
+	reqID, ok := ctx.Value("request_id").(string)
+	if !ok {
+		log.Error().Msg("Could not get request ID")
+	}
+	fmt.Println(reqID)
+	attachment := &slack.Attachment{
+		Color:  "ff0000",
+		Text:   err,
+		ID:     1000,
+		Title:  "Error",
+		Footer: reqID,
+	}
+	// multiple attachments
+	attachments := []slack.Attachment{*attachment}
+	params := slack.PostMessageParameters{AsUser: true}
+	params.Attachments = attachments
+
+	b.Client.PostMessage(channel, "", params)
+}
+
+func (b *Bot) routeMessage(ctx context.Context, msg string, ev *slack.MessageEvent) {
 	//  vm info
 	infoRegexp := regexp.MustCompile(`vm\s+info\s+([a-zA-Z0-9-\.]+)`)
 	if infoRegexp.MatchString(msg) {
@@ -119,7 +146,7 @@ func (b *Bot) routeMessage(msg string, ev *slack.MessageEvent) {
 		ss := infoRegexp.FindStringSubmatch(msg)
 		vmName := ss[1]
 
-		b.vmInfoHandler(ev.Channel, vmName)
+		b.vmInfoHandler(ctx, ev.Channel, vmName)
 		return
 	}
 
@@ -130,7 +157,7 @@ func (b *Bot) routeMessage(msg string, ev *slack.MessageEvent) {
 		ss := vmFindRegexp.FindStringSubmatch(msg)
 		vmName := ss[1]
 
-		b.vmFindHandler(ev.Channel, vmName)
+		b.vmFindHandler(ctx, ev.Channel, vmName)
 		return
 	}
 
