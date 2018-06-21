@@ -43,7 +43,7 @@ func (b *Bot) helpHandler(channel string) {
 func (b *Bot) vmInfoHandler(ctx context.Context, channel, vmName string) {
 	vmInfo, err := vm.Info(b.JannaAPIAddress, vmName)
 	if err != nil {
-		log.Error().Err(err).Msg("Could not get VM info")
+		log.Ctx(ctx).Error().Err(err).Msg("Could not get VM info")
 		b.ReplyWithError(ctx, channel, "Could not get VM info")
 		return
 	}
@@ -77,7 +77,7 @@ func (b *Bot) vmInfoHandler(ctx context.Context, channel, vmName string) {
 func (b *Bot) vmFindHandler(ctx context.Context, channel, pattern string) {
 	vmList, err := vm.List(b.JannaAPIAddress)
 	if err != nil {
-		log.Error().Err(err).Msg("Could not get VM list")
+		log.Ctx(ctx).Error().Err(err).Msg("Could not get VM list")
 		b.ReplyWithError(ctx, channel, "Could not get VM list")
 		return
 	}
