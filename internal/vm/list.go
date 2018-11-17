@@ -37,7 +37,7 @@ func List(jannaAddr string) ([]string, error) {
 		return nil, err
 	}
 
-	var vms []string
+	vms := make([]string, len(vmList.List))
 	for _, name := range vmList.List {
 		vms = append(vms, name)
 

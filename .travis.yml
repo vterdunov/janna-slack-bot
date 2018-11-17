@@ -9,9 +9,6 @@ env:
   global:
     - COMMIT=${TRAVIS_COMMIT::7}
 
-install:
-  - go get -u gopkg.in/golangci/golangci-lint.v1/cmd/golangci-lint
-
 script:
   - docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"
   - ./build/ci/travis.sh

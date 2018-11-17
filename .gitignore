@@ -1,14 +1,5 @@
 .vscode/
 
-/janna-slack-bot
+/janna-bot
 /debug
 .env
-
-# Ignore everything in vendor/, except for *.go files,
-# LICENSE and COPYING. Ignore Go tests.
-vendor/**/*
-!vendor/**/
-!vendor/**/*.go
-!vendor/**/LICENSE*
-!vendor/**/COPYING*
-vendor/**/*_test.go

@@ -1,15 +1,40 @@
-FROM golang:1.10.3-alpine AS build-stage
+ARG GOLANG_VERSION=1.11.2
 
-WORKDIR /go/src/github.com/vterdunov/janna-slack-bot/
+# ---------------
+FROM golang:${GOLANG_VERSION} AS env
 
-RUN apk add --no-cache git build-base ca-certificates
+RUN mkdir /user && \
+    echo 'janna-bot:x:65534:65534:janna-bot:/:' > /user/passwd && \
+    echo 'janna-bot:x:65534:' > /user/group
 
+WORKDIR /gomod
+COPY go.mod go.sum ./
+RUN go mod download
+
+# ---------------
+FROM env AS builder
+WORKDIR /build
 COPY . .
 
 RUN make compile
 
-FROM alpine:3.6
-RUN apk add --no-cache ca-certificates
-CMD ["/janna-slack-bot"]
+# ---------------
+FROM builder AS tester
 
-COPY --from=build-stage /go/src/github.com/vterdunov/janna-slack-bot/janna-slack-bot /janna-slack-bot
+RUN make test
+
+# ---------------
+FROM alpine:3.8 AS final
+
+ENV PORT=8080
+
+WORKDIR /janna-bot
+
+COPY --from=builder /user/group /user/passwd /etc/
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+USER janna-bot:janna-bot
+
+CMD ["./janna-bot"]
+
+COPY --from=builder /build/janna-bot /janna-bot
