@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PROJECT_NAME='janna-slack-bot'
+PROJECT_NAME='janna-bot'
 
 set -e
 

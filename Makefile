@@ -1,4 +1,4 @@
-PROG_NAME = janna-slack-bot
+PROG_NAME = janna-bot
 IMAGE_NAME = vterdunov/$(PROG_NAME)
 
 PORT ?= 8080
@@ -15,49 +15,48 @@ GO_LDFLAGS +="
 
 TAG ?= $(COMMIT)
 
-all: lint test docker
+GOLANGCI_LINTER_VERSION = v1.12.2
+
+all: lint docker
 
 .PHONY: docker
-docker:
+docker: ### Build Docker container
 	docker build --tag=$(IMAGE_NAME):$(COMMIT) --tag=$(IMAGE_NAME):latest --file build/Dockerfile .
 
 .PHONY: push
-push:
+push: ### Push docker container to registry
 	docker tag $(IMAGE_NAME):$(COMMIT) $(IMAGE_NAME):$(TAG)
 	docker push $(IMAGE_NAME):$(TAG)
 
-.PHONY: dep
-dep:
-	@dep ensure -v
-
 .PHONY: compile
-compile: clean
-	 $(GO_VARS) go build -v -ldflags $(GO_LDFLAGS) -o $(PROG_NAME) ./cmd/bot/bot.go
+compile: clean ### Compile bot
+	$(GO_VARS) go build -v -ldflags $(GO_LDFLAGS) -o $(PROG_NAME) ./cmd/bot/bot.go
 
 .PHONY: cgo-compile
 cgo-compile: clean
-	 go build -v -o $(PROG_NAME) ./cmd/bot/bot.go
+	go build -v -o $(PROG_NAME) ./cmd/bot/bot.go
 
-.PHONY: start
-start:
+.PHONY: run
+run: ### Extract env variables from .env and run bot with race detector
 	@env `cat .env | grep -v ^# | xargs` go run -race ./cmd/bot/bot.go
 
-.PHONY: dc
-dc: compile
-	docker-compose -f deploy/docker-compose.dev.yml up --build
+.PHONY: run-docker
+run-docker: docker ### Build docker image. Extract env variables from .env and run bot using docker.
+	docker run -it --rm --env-file=.env $(IMAGE_NAME):latest
 
 .PHONY: test
-test:
+test: ### Run tests
 	go test -v ./...
 
-.PHONY: check
-check:
-	@gometalinter.v2 ./...
-
 .PHONY: lint
-lint:
-	@golangci-lint run
+lint: ### Run linters
+	@echo Linting...
+	@docker run -it --rm -v $(CURDIR):/lint -w /lint golangci/golangci-lint:$(GOLANGCI_LINTER_VERSION) golangci-lint run
 
 .PHONY: clean
 clean:
 	@rm -f ${PROG_NAME}
+
+.PHONY: help
+help: ### Show this help.
+	@sed -e '/__hidethis__/d; /###/!d; s/:.\+### /\t/g' $(MAKEFILE_LIST)
