@@ -14,10 +14,10 @@ import (
 func (b *Bot) helpHandler(channel string) {
 	commands := map[string]string{
 		"vm deploy <VM_NAME> <URI to OVA file> [NETWORK]": "Deploy Virtual Machine from OVA file.",
-		"vm info <VM name>":                               "Information about Virtual Machine.",
-		"vm power <VM name> <on|off|reset|suspend>":       "Change Virtual Machine power state.",
-		"vm find <part of full of VMs names>":             "Find VMs by wildcard.",
-		"help": "See the available bot commands.",
+		"vm info <VM name>":                         "Information about Virtual Machine.",
+		"vm power <VM name> <on|off|reset|suspend>": "Change Virtual Machine power state.",
+		"vm find <part of full of VMs names>":       "Find VMs by wildcard.",
+		"help":                                      "See the available bot commands.",
 	}
 
 	fields := make([]slack.AttachmentField, 0)
