@@ -39,7 +39,8 @@ func Run(token string, b *bot.Bot) error {
 
 			botUserID = ev.Info.User.ID
 			botMentionTag = fmt.Sprintf("<@%s>", botUserID)
-			b.RegisterProtocol(protocolKey)
+			outgoingChannel := b.RegisterProtocol(protocolKey)
+			go sendMessage(rtm, outgoingChannel)
 
 		case *slack.MessageEvent:
 			if !isValid(ev) {
@@ -55,7 +56,7 @@ func Run(token string, b *bot.Bot) error {
 				User:     u.Name,
 				Message:  ev.Text,
 				Protocol: protocolKey,
-				Channel: ev.Channel,
+				Channel:  ev.Channel,
 			}
 
 			b.ReceiveMessage(msg)
@@ -77,8 +78,27 @@ func Run(token string, b *bot.Bot) error {
 	return nil
 }
 
-func sendMessage(rtm *slack.RTM, msg ) {
-	rtm.SendMessage(rtm.NewOutgoingMessage("hey", channelID))
+func sendMessage(rtm *slack.RTM, ch chan bot.OutgoingMessage) {
+	params := slack.PostMessageParameters{AsUser: true}
+
+	for outMsg := range ch {
+		if outMsg.ErrText != "" {
+			sendMessageWithError(rtm, outMsg.Channel, outMsg.ErrText)
+		}
+		fields := make([]slack.AttachmentField, 0)
+		fields = append(fields, slack.AttachmentField{
+			Value: outMsg.Text,
+		})
+		attachment := &slack.Attachment{
+			Pretext: outMsg.Title,
+			Color:   "#7CD197",
+			Fields:  fields,
+		}
+		attachments := []slack.Attachment{*attachment}
+		params.Attachments = attachments
+
+		rtm.PostMessage(outMsg.Channel, "", params)
+	}
 }
 
 // isDirectMessage returns true if this message is in a direct message conversation
@@ -96,4 +116,20 @@ func isValid(ev *slack.MessageEvent) bool {
 	}
 
 	return true
+}
+
+func sendMessageWithError(rtm *slack.RTM, channel, err string) {
+	attachment := &slack.Attachment{
+		Color: "ff0000",
+		Text:  err,
+		ID:    1000,
+		Title: "Error",
+		// Footer: reqID,
+	}
+	// multiple attachments
+	attachments := []slack.Attachment{*attachment}
+	params := slack.PostMessageParameters{AsUser: true}
+	params.Attachments = attachments
+
+	rtm.PostMessage(channel, "", params)
 }

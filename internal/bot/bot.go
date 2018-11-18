@@ -18,7 +18,7 @@ type Bot struct {
 
 	Protocols        []string
 	Messages         chan MessageData
-	OutgoingMessages map[string]chan MessageData
+	OutgoingMessages map[string]chan OutgoingMessage
 }
 
 type MessageData struct {
@@ -34,6 +34,14 @@ type MessageData struct {
 	Channel string
 }
 
+type OutgoingMessage struct {
+	User    string
+	Title   string
+	Text    string
+	ErrText string
+	Channel string
+}
+
 type contextKey int
 
 func (c contextKey) String() string {
@@ -46,10 +54,11 @@ const requestID contextKey = iota
 func New(cfg *config.Config, logger *zerolog.Logger) Bot {
 	msgs := make(chan MessageData, 500)
 	b := Bot{
-		Name:            cfg.BotName,
-		JannaAPIAddress: cfg.JannaAPIAddress,
-		Logger:          logger,
-		Messages:        msgs,
+		Name:             cfg.BotName,
+		JannaAPIAddress:  cfg.JannaAPIAddress,
+		Logger:           logger,
+		Messages:         msgs,
+		OutgoingMessages: map[string]chan OutgoingMessage{},
 	}
 
 	go b.handleMessages()
@@ -58,9 +67,12 @@ func New(cfg *config.Config, logger *zerolog.Logger) Bot {
 }
 
 // RegisterProtocol register a protocol for send an answer
-func (b *Bot) RegisterProtocol(protocol string) chan MessageData {
+func (b *Bot) RegisterProtocol(protocol string) chan OutgoingMessage {
 	b.Protocols = append(b.Protocols, protocol)
+	omChan := make(chan OutgoingMessage, 100)
+	b.OutgoingMessages[protocol] = omChan
 
+	return omChan
 }
 
 // ReceiveMessage must be called by a protocol upon receiving a message
@@ -75,46 +87,11 @@ func (b *Bot) handleMessages() {
 	}
 }
 
-// // Reply replies to a message event with a simple message.
-// func (b *Bot) Reply(channel, msg string) {
-// 	b.RTM.SendMessage(b.RTM.NewOutgoingMessage(msg, channel))
-
-// }
-
-// // ReplyWithAttachments replys to a message event with a Slack Attachments message.
-// func (b *Bot) ReplyWithAttachments(channel string, attachments []slack.Attachment) {
-// 	params := slack.PostMessageParameters{AsUser: true}
-// 	params.Attachments = attachments
-
-// 	b.Client.PostMessage(channel, "", params)
-// }
-
-// // ReplyWithError replys to a message event with an error message.
-// func (b *Bot) ReplyWithError(ctx context.Context, channel, err string) {
-// 	reqID, ok := ctx.Value(requestID).(string)
-// 	if !ok {
-// 		log.Ctx(ctx).Error().Msg("Could not get request ID")
-// 	}
-
-// 	attachment := &slack.Attachment{
-// 		Color:  "ff0000",
-// 		Text:   err,
-// 		ID:     1000,
-// 		Title:  "Error",
-// 		Footer: reqID,
-// 	}
-// 	// multiple attachments
-// 	attachments := []slack.Attachment{*attachment}
-// 	params := slack.PostMessageParameters{AsUser: true}
-// 	params.Attachments = attachments
-
-// 	b.Client.PostMessage(channel, "", params)
-// }
-
 func (b *Bot) routeMessage(msg MessageData) error {
 	switch msg.Message {
 	case "help":
-		fmt.Println("This routed to help handler")
+		om := helpHandler(msg)
+		b.OutgoingMessages[msg.Protocol] <- om
 	default:
 		fmt.Println("Unknow command")
 	}
@@ -155,10 +132,28 @@ func prepareMsg(text string) string {
 	return stripDirectMention(msg)
 }
 
-// // isDirectMessage returns true if this message is in a direct message conversation
-// func isDirectMessage(ev *slack.MessageEvent) bool {
-// 	return regexp.MustCompile("^D.*").MatchString(ev.Channel)
-// }
+func helpHandler(msg MessageData) OutgoingMessage {
+	commands := `
+*vm deploy <VM_NAME> <URI to OVA file> [NETWORK]*
+Deploy Virtual Machine from OVA file
+
+*vm info <VM name>*
+Information about Virtual Machine
+
+*vm power <VM name> <on|off|reset|suspend>*
+Change Virtual Machine power state
+
+*vm find <part of full of VMs names>*
+Find VMs by wildcard
+`
+
+	return OutgoingMessage{
+		Channel: msg.Channel,
+		User:    msg.User,
+		Title:   "Available bot commands",
+		Text:    commands,
+	}
+}
 
 // stripDirectMention removes a leading mention (aka direct mention) from a message string
 func stripDirectMention(text string) string {
