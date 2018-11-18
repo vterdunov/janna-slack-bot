@@ -2,6 +2,8 @@ package bot
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/rs/zerolog"
 
@@ -12,9 +14,11 @@ import (
 type Bot struct {
 	Name            string
 	JannaAPIAddress string
+	Logger          *zerolog.Logger
 
-	Logger   *zerolog.Logger
-	Messages chan MessageData
+	Protocols        []string
+	Messages         chan MessageData
+	OutgoingMessages map[string]chan MessageData
 }
 
 type MessageData struct {
@@ -23,6 +27,11 @@ type MessageData struct {
 
 	// Message itself
 	Message string
+
+	// Protocol show which service send the message
+	Protocol string
+
+	Channel string
 }
 
 type contextKey int
@@ -48,18 +57,22 @@ func New(cfg *config.Config, logger *zerolog.Logger) Bot {
 	return b
 }
 
-func (b *Bot) MessageReceived(msg MessageData) {
+// RegisterProtocol register a protocol for send an answer
+func (b *Bot) RegisterProtocol(protocol string) chan MessageData {
+	b.Protocols = append(b.Protocols, protocol)
+
+}
+
+// ReceiveMessage must be called by a protocol upon receiving a message
+func (b *Bot) ReceiveMessage(msg MessageData) {
 	b.Messages <- msg
 }
 
 func (b *Bot) handleMessages() {
 	for msg := range b.Messages {
-		fmt.Printf("%s: %s\n", msg.User, msg.Message)
+		prepareMsg(msg.Message)
+		b.routeMessage(msg)
 	}
-
-	// msg := prepareMsg(ev.Text)
-
-	// b.routeMessage(ctx, msg, ev)
 }
 
 // // Reply replies to a message event with a simple message.
@@ -98,50 +111,57 @@ func (b *Bot) handleMessages() {
 // 	b.Client.PostMessage(channel, "", params)
 // }
 
-// func (b *Bot) routeMessage(ctx context.Context, msg string, ev *slack.MessageEvent) {
-// 	//  vm info
-// 	infoRegexp := regexp.MustCompile(`vm\s+info\s+([a-zA-Z0-9-\.]+)`)
-// 	if infoRegexp.MatchString(msg) {
-// 		log.Ctx(ctx).Debug().Msg("calling VM info handler")
-// 		ss := infoRegexp.FindStringSubmatch(msg)
-// 		vmName := ss[1]
+func (b *Bot) routeMessage(msg MessageData) error {
+	switch msg.Message {
+	case "help":
+		fmt.Println("This routed to help handler")
+	default:
+		fmt.Println("Unknow command")
+	}
+	// //  vm info
+	// infoRegexp := regexp.MustCompile(`vm\s+info\s+([a-zA-Z0-9-\.]+)`)
+	// if infoRegexp.MatchString(msg) {
+	// 	log.Ctx(ctx).Debug().Msg("calling VM info handler")
+	// 	ss := infoRegexp.FindStringSubmatch(msg)
+	// 	vmName := ss[1]
 
-// 		b.vmInfoHandler(ctx, ev.Channel, vmName)
-// 		return
-// 	}
+	// 	b.vmInfoHandler(ctx, ev.Channel, vmName)
+	// 	return
+	// }
 
-// 	// vm find
-// 	vmFindRegexp := regexp.MustCompile(`vm\s+find\s+([a-zA-Z0-9-\.]+)`)
-// 	if vmFindRegexp.MatchString(msg) {
-// 		log.Ctx(ctx).Debug().Msg("calling VM find handler")
-// 		ss := vmFindRegexp.FindStringSubmatch(msg)
-// 		vmName := ss[1]
+	// // vm find
+	// vmFindRegexp := regexp.MustCompile(`vm\s+find\s+([a-zA-Z0-9-\.]+)`)
+	// if vmFindRegexp.MatchString(msg) {
+	// 	log.Ctx(ctx).Debug().Msg("calling VM find handler")
+	// 	ss := vmFindRegexp.FindStringSubmatch(msg)
+	// 	vmName := ss[1]
 
-// 		b.vmFindHandler(ctx, ev.Channel, vmName)
-// 		return
-// 	}
+	// 	b.vmFindHandler(ctx, ev.Channel, vmName)
+	// 	return
+	// }
 
-// 	// help
-// 	helpRegexp := regexp.MustCompile(`help`)
-// 	if helpRegexp.MatchString(msg) {
-// 		log.Ctx(ctx).Debug().Msg("calling help handler")
-// 		b.helpHandler(ev.Channel)
-// 		return
-// 	}
-// }
+	// // help
+	// helpRegexp := regexp.MustCompile(`help`)
+	// if helpRegexp.MatchString(msg) {
+	// 	log.Ctx(ctx).Debug().Msg("calling help handler")
+	// 	b.helpHandler(ev.Channel)
+	// 	return
+	// }
+	return nil
+}
 
-// func prepareMsg(text string) string {
-// 	msg := strings.TrimSpace(text)
-// 	return stripDirectMention(msg)
-// }
+func prepareMsg(text string) string {
+	msg := strings.TrimSpace(text)
+	return stripDirectMention(msg)
+}
 
 // // isDirectMessage returns true if this message is in a direct message conversation
 // func isDirectMessage(ev *slack.MessageEvent) bool {
 // 	return regexp.MustCompile("^D.*").MatchString(ev.Channel)
 // }
 
-// // stripDirectMention removes a leading mention (aka direct mention) from a message string
-// func stripDirectMention(text string) string {
-// 	r := regexp.MustCompile(`(^<@[a-zA-Z0-9]+>[\:]*[\s]*)?(.*)`)
-// 	return r.FindStringSubmatch(text)[2]
-// }
+// stripDirectMention removes a leading mention (aka direct mention) from a message string
+func stripDirectMention(text string) string {
+	r := regexp.MustCompile(`(^<@[a-zA-Z0-9]+>[\:]*[\s]*)?(.*)`)
+	return r.FindStringSubmatch(text)[2]
+}

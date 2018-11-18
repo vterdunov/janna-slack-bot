@@ -14,6 +14,8 @@ import (
 var botUserID string
 var botMentionTag string
 
+const protocolKey = "slack"
+
 // Run connects to slack API with the provided token
 func Run(token string, b *bot.Bot) error {
 	api := slack.New(token)
@@ -37,6 +39,7 @@ func Run(token string, b *bot.Bot) error {
 
 			botUserID = ev.Info.User.ID
 			botMentionTag = fmt.Sprintf("<@%s>", botUserID)
+			b.RegisterProtocol(protocolKey)
 
 		case *slack.MessageEvent:
 			if !isValid(ev) {
@@ -49,11 +52,13 @@ func Run(token string, b *bot.Bot) error {
 			}
 
 			msg := bot.MessageData{
-				User:    u.Name,
-				Message: ev.Text,
+				User:     u.Name,
+				Message:  ev.Text,
+				Protocol: protocolKey,
+				Channel: ev.Channel,
 			}
 
-			b.MessageReceived(msg)
+			b.ReceiveMessage(msg)
 
 		case *slack.RTMError:
 			log.Error().Str("error", ev.Msg).Int("code", ev.Code).Msg("")
@@ -72,8 +77,8 @@ func Run(token string, b *bot.Bot) error {
 	return nil
 }
 
-func ownMessage(UserID string) bool {
-	return botUserID == UserID
+func sendMessage(rtm *slack.RTM, msg ) {
+	rtm.SendMessage(rtm.NewOutgoingMessage("hey", channelID))
 }
 
 // isDirectMessage returns true if this message is in a direct message conversation
@@ -82,7 +87,7 @@ func isDirectMessage(ev *slack.MessageEvent) bool {
 }
 
 func isValid(ev *slack.MessageEvent) bool {
-	if ev.Hidden && ownMessage(ev.User) {
+	if ev.Hidden && botUserID == ev.User {
 		return false
 	}
 
