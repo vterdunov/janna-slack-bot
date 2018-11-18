@@ -1,15 +1,14 @@
 package main
 
 import (
-	"context"
 	"os"
 
-	"github.com/nlopes/slack"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/vterdunov/janna-slack-bot/internal/bot"
 	"github.com/vterdunov/janna-slack-bot/internal/config"
+	"github.com/vterdunov/janna-slack-bot/pkg/slack"
 )
 
 func main() {
@@ -19,14 +18,8 @@ func main() {
 	}
 
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	client := slack.New(cfg.BotToken)
 
-	ctx := context.Background()
+	bot := bot.New(cfg, &logger)
 
-	bot := bot.New(cfg, client, &logger)
-
-	logger.Info().Msg("Run bot")
-	if err := bot.Run(ctx); err != nil {
-		logger.Error().Err(err).Msg("error while bot is rinning")
-	}
+	slack.Run(cfg.BotToken, &bot)
 }

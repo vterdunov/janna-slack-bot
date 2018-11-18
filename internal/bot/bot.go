@@ -1,16 +1,9 @@
 package bot
 
 import (
-	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
-	"github.com/nlopes/slack"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/vterdunov/janna-slack-bot/internal/config"
 )
@@ -18,12 +11,18 @@ import (
 // Bot represents a bot
 type Bot struct {
 	Name            string
-	UserID          string
 	JannaAPIAddress string
 
-	Logger *zerolog.Logger
-	Client *slack.Client
-	RTM    *slack.RTM
+	Logger   *zerolog.Logger
+	Messages chan MessageData
+}
+
+type MessageData struct {
+	// User who sent the message
+	User string
+
+	// Message itself
+	Message string
 }
 
 type contextKey int
@@ -35,162 +34,114 @@ func (c contextKey) String() string {
 const requestID contextKey = iota
 
 // New create a new bot instance
-func New(cfg *config.Config, client *slack.Client, logger *zerolog.Logger) *Bot {
-	return &Bot{
+func New(cfg *config.Config, logger *zerolog.Logger) Bot {
+	msgs := make(chan MessageData, 500)
+	b := Bot{
 		Name:            cfg.BotName,
 		JannaAPIAddress: cfg.JannaAPIAddress,
 		Logger:          logger,
-		Client:          client,
-	}
-}
-
-// Run bot
-func (b *Bot) Run(_ context.Context) error {
-	_, err := b.Client.AuthTest()
-	if err != nil {
-		return errors.Wrap(err, "did not authenticate")
+		Messages:        msgs,
 	}
 
-	b.RTM = b.Client.NewRTM()
-	go b.RTM.ManageConnection()
+	go b.handleMessages()
 
-	ctx := context.Background()
+	return b
+}
 
-	for msg := range b.RTM.IncomingEvents {
-		switch ev := msg.Data.(type) {
+func (b *Bot) MessageReceived(msg MessageData) {
+	b.Messages <- msg
+}
 
-		case *slack.RTMError:
-			log.Error().Str("error", ev.Msg).Int("code", ev.Code).Msg("")
-
-		case *slack.ConnectingEvent:
-			log.Info().
-				Int("connections count", ev.ConnectionCount).
-				Int("attempt", ev.Attempt).
-				Msg("Connecting bot to Slack")
-
-		case *slack.ConnectedEvent:
-			log.Info().
-				Str("bot name", ev.Info.User.Name).
-				Int("connections count", ev.ConnectionCount).
-				Msg("Connected")
-
-			b.UserID = ev.Info.User.ID
-
-		case *slack.MessageEvent:
-			uuid := uuid.NewV4()
-			ctx = context.WithValue(ctx, requestID, uuid.String())
-			ctx = b.Logger.With().Str("request_id", uuid.String()).Logger().WithContext(ctx)
-
-			b.handleMessageEvent(ctx, ev)
-
-		case *slack.DisconnectedEvent:
-			log.Info().Msg("Bot disconnected")
-
-		default:
-			// Ignore other events..
-		}
+func (b *Bot) handleMessages() {
+	for msg := range b.Messages {
+		fmt.Printf("%s: %s\n", msg.User, msg.Message)
 	}
 
-	return nil
+	// msg := prepareMsg(ev.Text)
+
+	// b.routeMessage(ctx, msg, ev)
 }
 
-func (b *Bot) handleMessageEvent(ctx context.Context, ev *slack.MessageEvent) {
-	// ignore messages from the current user, the bot user
-	if b.UserID == ev.User {
-		return
-	}
+// // Reply replies to a message event with a simple message.
+// func (b *Bot) Reply(channel, msg string) {
+// 	b.RTM.SendMessage(b.RTM.NewOutgoingMessage(msg, channel))
 
-	// check if the message to bot
-	botMentionTag := fmt.Sprintf("<@%s>", b.UserID)
-	if !strings.HasPrefix(ev.Msg.Text, botMentionTag) && !isDirectMessage(ev) {
-		return
-	}
+// }
 
-	msg := prepareMsg(ev.Text)
+// // ReplyWithAttachments replys to a message event with a Slack Attachments message.
+// func (b *Bot) ReplyWithAttachments(channel string, attachments []slack.Attachment) {
+// 	params := slack.PostMessageParameters{AsUser: true}
+// 	params.Attachments = attachments
 
-	b.routeMessage(ctx, msg, ev)
-}
+// 	b.Client.PostMessage(channel, "", params)
+// }
 
-// Reply replies to a message event with a simple message.
-func (b *Bot) Reply(channel, msg string) {
-	b.RTM.SendMessage(b.RTM.NewOutgoingMessage(msg, channel))
+// // ReplyWithError replys to a message event with an error message.
+// func (b *Bot) ReplyWithError(ctx context.Context, channel, err string) {
+// 	reqID, ok := ctx.Value(requestID).(string)
+// 	if !ok {
+// 		log.Ctx(ctx).Error().Msg("Could not get request ID")
+// 	}
 
-}
+// 	attachment := &slack.Attachment{
+// 		Color:  "ff0000",
+// 		Text:   err,
+// 		ID:     1000,
+// 		Title:  "Error",
+// 		Footer: reqID,
+// 	}
+// 	// multiple attachments
+// 	attachments := []slack.Attachment{*attachment}
+// 	params := slack.PostMessageParameters{AsUser: true}
+// 	params.Attachments = attachments
 
-// ReplyWithAttachments replys to a message event with a Slack Attachments message.
-func (b *Bot) ReplyWithAttachments(channel string, attachments []slack.Attachment) {
-	params := slack.PostMessageParameters{AsUser: true}
-	params.Attachments = attachments
+// 	b.Client.PostMessage(channel, "", params)
+// }
 
-	b.Client.PostMessage(channel, "", params)
-}
+// func (b *Bot) routeMessage(ctx context.Context, msg string, ev *slack.MessageEvent) {
+// 	//  vm info
+// 	infoRegexp := regexp.MustCompile(`vm\s+info\s+([a-zA-Z0-9-\.]+)`)
+// 	if infoRegexp.MatchString(msg) {
+// 		log.Ctx(ctx).Debug().Msg("calling VM info handler")
+// 		ss := infoRegexp.FindStringSubmatch(msg)
+// 		vmName := ss[1]
 
-// ReplyWithError replys to a message event with an error message.
-func (b *Bot) ReplyWithError(ctx context.Context, channel, err string) {
-	reqID, ok := ctx.Value(requestID).(string)
-	if !ok {
-		log.Ctx(ctx).Error().Msg("Could not get request ID")
-	}
+// 		b.vmInfoHandler(ctx, ev.Channel, vmName)
+// 		return
+// 	}
 
-	attachment := &slack.Attachment{
-		Color:  "ff0000",
-		Text:   err,
-		ID:     1000,
-		Title:  "Error",
-		Footer: reqID,
-	}
-	// multiple attachments
-	attachments := []slack.Attachment{*attachment}
-	params := slack.PostMessageParameters{AsUser: true}
-	params.Attachments = attachments
+// 	// vm find
+// 	vmFindRegexp := regexp.MustCompile(`vm\s+find\s+([a-zA-Z0-9-\.]+)`)
+// 	if vmFindRegexp.MatchString(msg) {
+// 		log.Ctx(ctx).Debug().Msg("calling VM find handler")
+// 		ss := vmFindRegexp.FindStringSubmatch(msg)
+// 		vmName := ss[1]
 
-	b.Client.PostMessage(channel, "", params)
-}
+// 		b.vmFindHandler(ctx, ev.Channel, vmName)
+// 		return
+// 	}
 
-func (b *Bot) routeMessage(ctx context.Context, msg string, ev *slack.MessageEvent) {
-	//  vm info
-	infoRegexp := regexp.MustCompile(`vm\s+info\s+([a-zA-Z0-9-\.]+)`)
-	if infoRegexp.MatchString(msg) {
-		log.Ctx(ctx).Debug().Msg("calling VM info handler")
-		ss := infoRegexp.FindStringSubmatch(msg)
-		vmName := ss[1]
+// 	// help
+// 	helpRegexp := regexp.MustCompile(`help`)
+// 	if helpRegexp.MatchString(msg) {
+// 		log.Ctx(ctx).Debug().Msg("calling help handler")
+// 		b.helpHandler(ev.Channel)
+// 		return
+// 	}
+// }
 
-		b.vmInfoHandler(ctx, ev.Channel, vmName)
-		return
-	}
+// func prepareMsg(text string) string {
+// 	msg := strings.TrimSpace(text)
+// 	return stripDirectMention(msg)
+// }
 
-	// vm find
-	vmFindRegexp := regexp.MustCompile(`vm\s+find\s+([a-zA-Z0-9-\.]+)`)
-	if vmFindRegexp.MatchString(msg) {
-		log.Ctx(ctx).Debug().Msg("calling VM find handler")
-		ss := vmFindRegexp.FindStringSubmatch(msg)
-		vmName := ss[1]
+// // isDirectMessage returns true if this message is in a direct message conversation
+// func isDirectMessage(ev *slack.MessageEvent) bool {
+// 	return regexp.MustCompile("^D.*").MatchString(ev.Channel)
+// }
 
-		b.vmFindHandler(ctx, ev.Channel, vmName)
-		return
-	}
-
-	// help
-	helpRegexp := regexp.MustCompile(`help`)
-	if helpRegexp.MatchString(msg) {
-		log.Ctx(ctx).Debug().Msg("calling help handler")
-		b.helpHandler(ev.Channel)
-		return
-	}
-}
-
-func prepareMsg(text string) string {
-	msg := strings.TrimSpace(text)
-	return stripDirectMention(msg)
-}
-
-// isDirectMessage returns true if this message is in a direct message conversation
-func isDirectMessage(ev *slack.MessageEvent) bool {
-	return regexp.MustCompile("^D.*").MatchString(ev.Channel)
-}
-
-// stripDirectMention removes a leading mention (aka direct mention) from a message string
-func stripDirectMention(text string) string {
-	r := regexp.MustCompile(`(^<@[a-zA-Z0-9]+>[\:]*[\s]*)?(.*)`)
-	return r.FindStringSubmatch(text)[2]
-}
+// // stripDirectMention removes a leading mention (aka direct mention) from a message string
+// func stripDirectMention(text string) string {
+// 	r := regexp.MustCompile(`(^<@[a-zA-Z0-9]+>[\:]*[\s]*)?(.*)`)
+// 	return r.FindStringSubmatch(text)[2]
+// }
