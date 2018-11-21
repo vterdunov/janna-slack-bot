@@ -25,13 +25,16 @@ type MessageData struct {
 	// User who sent the message
 	User string
 
-	// Message itself
+	// Message is a raw message itself
 	Message string
 
 	// Protocol show which service send the message
 	Protocol string
 
 	Channel string
+
+	// Cmd parsed message to separated words
+	Cmd []string
 }
 
 type OutgoingMessage struct {
@@ -82,69 +85,59 @@ func (b *Bot) ReceiveMessage(msg MessageData) {
 
 func (b *Bot) handleMessages() {
 	for msg := range b.Messages {
-		prepareMsg(msg.Message)
+		msg.Cmd = prepareMsg(msg.Message)
 		b.routeMessage(msg)
 	}
 }
 
 func (b *Bot) routeMessage(msg MessageData) error {
-	switch msg.Message {
+	switch msg.Cmd[0] {
 	case "help":
 		om := helpHandler(msg)
 		b.OutgoingMessages[msg.Protocol] <- om
+
+	case "get", "create", "delete":
+		switch msg.Cmd[1] {
+		case "vm":
+			switch msg.Cmd[2] {
+			case "snapshot", "snapshots":
+				fmt.Println("snapshot")
+			case "screenshot":
+				fmt.Println("screenshot")
+			default:
+				fmt.Println("unknown VM sub-command")
+			}
+		default:
+			fmt.Println("unknown sub-command")
+		}
+
 	default:
-		fmt.Println("Unknow command")
+		fmt.Println("Unknown command")
 	}
-	// //  vm info
-	// infoRegexp := regexp.MustCompile(`vm\s+info\s+([a-zA-Z0-9-\.]+)`)
-	// if infoRegexp.MatchString(msg) {
-	// 	log.Ctx(ctx).Debug().Msg("calling VM info handler")
-	// 	ss := infoRegexp.FindStringSubmatch(msg)
-	// 	vmName := ss[1]
-
-	// 	b.vmInfoHandler(ctx, ev.Channel, vmName)
-	// 	return
-	// }
-
-	// // vm find
-	// vmFindRegexp := regexp.MustCompile(`vm\s+find\s+([a-zA-Z0-9-\.]+)`)
-	// if vmFindRegexp.MatchString(msg) {
-	// 	log.Ctx(ctx).Debug().Msg("calling VM find handler")
-	// 	ss := vmFindRegexp.FindStringSubmatch(msg)
-	// 	vmName := ss[1]
-
-	// 	b.vmFindHandler(ctx, ev.Channel, vmName)
-	// 	return
-	// }
-
-	// // help
-	// helpRegexp := regexp.MustCompile(`help`)
-	// if helpRegexp.MatchString(msg) {
-	// 	log.Ctx(ctx).Debug().Msg("calling help handler")
-	// 	b.helpHandler(ev.Channel)
-	// 	return
-	// }
 	return nil
 }
 
-func prepareMsg(text string) string {
+func prepareMsg(text string) []string {
 	msg := strings.TrimSpace(text)
-	return stripDirectMention(msg)
+	msg = stripDirectMention(msg)
+	cmd := strings.Split(msg, " ")
+	return cmd
 }
 
 func helpHandler(msg MessageData) OutgoingMessage {
 	commands := `
-*vm deploy <VM_NAME> <URI to OVA file> [NETWORK]*
-Deploy Virtual Machine from OVA file
+*get vm <name>*
+Find and return short information about the Virtual Machine.
+*delete vm <name>*
+Delete the Virtual Machine
 
-*vm info <VM name>*
-Information about Virtual Machine
-
-*vm power <VM name> <on|off|reset|suspend>*
-Change Virtual Machine power state
-
-*vm find <part of full of VMs names>*
-Find VMs by wildcard
+*get vm snapshot[s] <name>*
+List the Virtual Machine snapshots
+*create vm snapshot <name>*
+*get vm snapshot[s] <name> <snapshot name>*
+Create snapshot for the Virtual Machine
+*delete vm snapshot <name> <snapshot name>*
+Delete the snapshot
 `
 
 	return OutgoingMessage{

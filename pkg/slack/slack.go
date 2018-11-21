@@ -1,3 +1,4 @@
+// slack package handles incoming and outgoing messages from Slask
 package slack
 
 import (
@@ -107,7 +108,7 @@ func isDirectMessage(ev *slack.MessageEvent) bool {
 }
 
 func isValid(ev *slack.MessageEvent) bool {
-	if ev.Hidden && botUserID == ev.User {
+	if ev.Hidden || botUserID == ev.User {
 		return false
 	}
 
