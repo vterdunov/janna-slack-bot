@@ -91,29 +91,59 @@ func (b *Bot) handleMessages() {
 }
 
 func (b *Bot) routeMessage(msg MessageData) error {
-	switch msg.Cmd[0] {
-	case "help":
+	if msg.Cmd[0] == "help" {
 		om := helpHandler(msg)
 		b.OutgoingMessages[msg.Protocol] <- om
+	}
 
-	case "get", "create", "delete":
-		switch msg.Cmd[1] {
-		case "vm":
-			switch msg.Cmd[2] {
-			case "snapshot", "snapshots":
-				fmt.Println("snapshot")
-			case "screenshot":
-				fmt.Println("screenshot")
-			default:
-				fmt.Println("unknown VM sub-command")
-			}
+	if len(msg.Cmd) < 2 {
+		om := helpHandler(msg)
+		om.Title = "Unknown command"
+		b.OutgoingMessages[msg.Protocol] <- om
+	}
+
+	switch msg.Cmd[1] {
+	case "vm":
+		switch msg.Cmd[0] {
+		case "get":
+			om := b.vmInfoHandler(msg)
+			b.OutgoingMessages[msg.Protocol] <- om
+		case "create":
+			fmt.Println("create VM")
+		case "delete":
+			fmt.Println("delete VM")
+		}
+
+	case "snapshot", "snapshots":
+		switch msg.Cmd[0] {
+		case "get":
+			fmt.Println("get VM shapshot")
+		case "create":
+			fmt.Println("create VM shapshot")
+		case "delete":
+			fmt.Println("delete VM shapshot")
+		}
+
+	case "screenshot":
+		switch msg.Cmd[0] {
+		case "get":
+			fmt.Println("get VM screenshot")
+		}
+
+	case "power":
+		switch msg.Cmd[0] {
+		case "get":
+			fmt.Println("get VM power")
+		case "create":
+			fmt.Println("create VM power")
 		default:
-			fmt.Println("unknown sub-command")
+			fmt.Println("Unknown power command")
 		}
 
 	default:
-		fmt.Println("Unknown command")
+		fmt.Println("unknown sub-command")
 	}
+
 	return nil
 }
 
@@ -131,12 +161,12 @@ Find and return short information about the Virtual Machine.
 *delete vm <name>*
 Delete the Virtual Machine
 
-*get vm snapshot[s] <name>*
+*get snapshot[s] <name>*
 List the Virtual Machine snapshots
 *create vm snapshot <name>*
-*get vm snapshot[s] <name> <snapshot name>*
+*get snapshot[s] <name> <snapshot name>*
 Create snapshot for the Virtual Machine
-*delete vm snapshot <name> <snapshot name>*
+*delete snapshot <name> <snapshot name>*
 Delete the snapshot
 `
 

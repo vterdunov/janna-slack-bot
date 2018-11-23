@@ -85,6 +85,7 @@ func sendMessage(rtm *slack.RTM, ch chan bot.OutgoingMessage) {
 	for outMsg := range ch {
 		if outMsg.ErrText != "" {
 			sendMessageWithError(rtm, outMsg.Channel, outMsg.ErrText)
+			continue
 		}
 		fields := make([]slack.AttachmentField, 0)
 		fields = append(fields, slack.AttachmentField{

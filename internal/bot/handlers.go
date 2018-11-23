@@ -1,38 +1,35 @@
 package bot
 
-// func (b *Bot) vmInfoHandler(ctx context.Context, channel, vmName string) {
-// 	vmInfo, err := vm.Info(b.JannaAPIAddress, vmName)
-// 	if err != nil {
-// 		log.Ctx(ctx).Error().Err(err).Msg("Could not get VM info")
-// 		b.ReplyWithError(ctx, channel, "Could not get VM info")
-// 		return
-// 	}
+import (
+	"fmt"
 
-// 	vmValues := map[string]string{
-// 		"IP address":  vmInfo.IP,
-// 		"Power state": vmInfo.PowerState,
-// 		"UUID":        vmInfo.UUID,
-// 	}
+	"github.com/vterdunov/janna-slack-bot/internal/vm"
+)
 
-// 	fields := make([]slack.AttachmentField, 0)
-// 	for k, v := range vmValues {
-// 		fields = append(fields, slack.AttachmentField{
-// 			Title: k,
-// 			Value: v,
-// 		})
-// 	}
+func (b *Bot) vmInfoHandler(msg MessageData) OutgoingMessage {
+	om := OutgoingMessage{
+		Channel: msg.Channel,
+		User:    msg.User,
+		Title:   "Virtual Machine Info",
+	}
 
-// 	attachment := &slack.Attachment{
-// 		Pretext: vmName + " information",
-// 		Color:   "a9a9a9",
-// 		Fields:  fields,
-// 	}
+	vmName := msg.Cmd[2]
+	vmInfo, err := vm.Info(b.JannaAPIAddress, vmName)
+	if err != nil {
+		om.ErrText = err.Error()
+		return om
+	}
 
-// 	// multiple attachments
-// 	attachments := []slack.Attachment{*attachment}
+	result := fmt.Sprintf(`
+IP address: %s
+Power state: %s
+UUID: %s
+`, vmInfo.IP, vmInfo.PowerState, vmInfo.UUID)
 
-// 	b.ReplyWithAttachments(channel, attachments)
-// }
+	om.Text = result
+
+	return om
+}
 
 // func (b *Bot) vmFindHandler(ctx context.Context, channel, pattern string) {
 // 	vmList, err := vm.List(b.JannaAPIAddress)
